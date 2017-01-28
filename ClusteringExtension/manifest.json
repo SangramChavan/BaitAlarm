@@ -1,0 +1,20 @@
+{
+  "name": "Anti-Phishing",
+  "description": "Add Clustering support to Your Website",
+  "omnibox": {
+    "keyword": "WEB"
+  },
+  "icons": {
+    "16": "icon.png"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "version": "1.0",
+  "minimum_chrome_version": "9",
+  "manifest_version": 2,
+  "permissions": [
+    "http://*/"
+
+]
+}

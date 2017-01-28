@@ -1,0 +1,719 @@
+package com.helper;
+
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+
+import javax.mail.Address;
+import javax.mail.BodyPart;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.Part;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.internet.MimeMultipart;
+import javax.mail.search.AndTerm;
+import javax.mail.search.ComparisonTerm;
+import javax.mail.search.ReceivedDateTerm;
+import javax.mail.search.SearchTerm;
+
+import org.jsoup.Jsoup;
+
+public class ReadRecentMail {
+	
+	public static void main(String[] args) {
+//		storeAllEmails(ACCOUNT_USER2, ACCOUNT_PASSWORD2,1);
+		getMyEmails(ACCOUNT_USER2, ACCOUNT_PASSWORD2,"4");
+	}
+	public static List<EmailModel> getMyEmails(String username,String password,String userId){
+		storeAllEmails(username, password, userId);
+		updatePhishingRules(userId);
+		List<EmailModel> list=DBUtils.getBeanList(EmailModel.class, "SELECT messageId, toid, fromid, sub, mdate, udate, userid, messageNo FROM emails where userId="+userId+" order by messageId desc limit 0,100");
+		PhishMailGuard.updateWhitelistURL();
+		return list;
+	}
+	public static List<EmailModel> getSpamEmails(String username,String password,String userId){
+		List<EmailModel> list=DBUtils.getBeanList(EmailModel.class, "SELECT messageId, toid, fromid, sub,  mdate, udate,  messageNo, spamId, mailId, multipleTo, ipAddressURLs, shortenedURLS, anchorHrefURLDiffs, whitelistURLs, inputTypes, hasSpamKeywords FROM emails E ,spammails S where E.userId=S.userId and E.userId="+userId+" and E.messageId=S.mailId and (S.multipleTo= 1 OR S.ipAddressURLs>0 OR s.shortenedURLS>0 OR s.anchorHrefURLDiffs>0 OR  s.whitelistURLs>0 OR s.inputTypes=1 OR s.hasSpamKeywords=1) order by messageId desc ");
+		return list;
+	}
+	
+	public static void insertSpamModel(SpamModel spam,String mid,String userId){
+		String query="insert into spammails(mailId, multipleTo, ipAddressURLs, shortenedURLS, anchorHrefURLDiffs, whitelistURLs, inputTypes, hasSpamKeywords,userId)" +
+				"values(?,?,?,?,?,?,?,?,?) ";
+		DBUtils.executeUpdate(query, new Object[]
+		{ mid,
+		 spam.isMultipleTo()?1:0,
+				 spam.getIpAddressURLs(),
+				 spam.getShortenedURLS(),
+				 spam.getAnchorHrefURLDiffs(),
+				 spam.getWhitelistURLs(),
+				 spam.isInputTypes()?1:0,
+				spam.isHasSpamKeywords()?1:0,
+						userId
+				
+		}
+		);
+		
+	}
+	public static void updatePhishingRules(String userId){
+
+		String query="SELECT coalesce(max(mailId),0) as mno FROM spammails where userId="+userId;
+		final int maxMessageNumber=DBUtils.getMaxValue(query);
+		
+		List<EmailModel> emails =DBUtils.getBeanList(EmailModel.class, "Select * from emails where userid="+userId+" and messageId >"+maxMessageNumber);
+		for (int i = 0; i < emails.size(); i++) {
+			EmailModel email=(EmailModel) emails.get(i);
+			SpamModel spam=PhishMailGuard.processMessage(email.getBody(),email.getFromid(),email.getToid(),email.getSub());
+			insertSpamModel(spam, email.getMessageId(),userId);
+		}
+		
+		
+	}
+	public static Message[] getAllGmails(String username,String password) {
+
+		ArrayList list = new ArrayList();
+		Properties props = new Properties();
+		props.setProperty("mail.store.protocol", "imaps");
+		Message msg[] = null;
+		try {
+			Session session = Session.getInstance(props, null);
+			Store store = session.getStore();
+			store.connect("imap.gmail.com", username, password);
+			
+
+			Folder inbox = store.getFolder("INBOX");
+			System.out.println(inbox.getMessageCount());
+			inbox.open(Folder.READ_ONLY);
+			final int total=inbox.getMessageCount();
+			
+			SearchTerm sr = new SearchTerm() {
+
+				@Override
+				public boolean match(Message arg0) {
+					// TODO Auto-generated method stub
+					if(total<100){
+						return true;
+					}else{
+						boolean condition=arg0.getMessageNumber() >total-20;;
+						return condition;
+					}
+//					try {
+//						System.out.println(arg0.getSubject());
+//						if(arg0.getSubject().indexOf("Pro Tip: Track")!=-1){
+//							return true;
+//						}
+//					} catch (Exception e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//					return false;
+					
+//					System.out.println(arg0.getFolder());
+//					if (condition)
+//						return condition;
+//					else
+//						return true;
+				}
+			};
+			msg = inbox.search(sr);
+
+			System.out.println("Got Emails " + msg.length);
+		} catch (Exception mex) {
+		}
+		return msg;
+		
+		
+		
+	}
+	public static Message[] storeAllEmails(String username,String password,String userId) {
+
+		String query="SELECT coalesce(max(MessageNo),0) as mno FROM emails where userid="+userId;
+		final int maxMessageNumber=DBUtils.getMaxValue(query);
+		ArrayList list = new ArrayList();
+		Properties props = new Properties();
+		props.setProperty("mail.store.protocol", "imaps");
+		Message msg[] = null;
+		try {
+			Session session = Session.getInstance(props, null);
+			Store store = session.getStore();
+			store.connect("imap.gmail.com", username, password);
+			
+
+			Folder inbox = store.getFolder("INBOX");
+			System.out.println(inbox.getMessageCount());
+			inbox.open(Folder.READ_ONLY);
+			final int total=inbox.getMessageCount();
+			
+			SearchTerm sr = new SearchTerm() {
+
+				@Override
+				public boolean match(Message arg0) {
+					// TODO Auto-generated method stub
+//					if(total<100){
+//						return true;
+//					}else{
+						boolean condition=arg0.getMessageNumber()>maxMessageNumber;;
+						return condition;
+//					}
+//					try {
+//						System.out.println(arg0.getSubject());
+//						if(arg0.getSubject().indexOf("Pro Tip: Track")!=-1){
+//							return true;
+//						}
+//					} catch (Exception e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//					return false;
+					
+//					System.out.println(arg0.getFolder());
+//					if (condition)
+//						return condition;
+//					else
+//						return true;
+				}
+			};
+			msg = inbox.search(sr);
+			
+			for (int i = 0; i < msg.length; i++) {
+					Message m= msg[i];
+				String subject ="";
+				String sendDate=m.getSentDate().toString();
+				try {
+					subject = m.getSubject();
+				}catch (Exception e) {
+
+				}
+				Address[] froms;
+				String from = "";
+				try {
+					froms = m.getFrom();
+					for (int j = 0; froms != null && j < froms.length; j++) {
+						String s = froms[j].toString().toLowerCase();
+						if (s.indexOf("<") != -1)
+							s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+						from += "," + s.toString();
+					}
+				} catch (MessagingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				String toString = "";
+				Address[] to;
+				boolean multipleTo=true;
+				try {
+					to = m.getAllRecipients();
+					for (int j = 0; to != null && j < to.length; j++) {
+						String s = to[j].toString().toLowerCase();
+						if (s.indexOf("<") != -1)
+							s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+						toString += "," + s.toString();
+						
+					}
+					if(to!=null&&to.length>5){
+						multipleTo=true;
+					}
+					
+					// System.out.println("TO String "+toString);
+				} catch (MessagingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				ArrayList<String> data = ReadRecentMail.processMessageBody(m);
+				System.out.println("Data " + data.size());
+				// FileWriter a=new FileWriter(new File("D:/a.html"));
+				// a.write(data.get(0));
+				// a.close();
+				String body="";
+				SpamModel sm=null;
+				for (int j = 0; j < data.size(); j++) {
+					body=data.get(j);
+					if(body.startsWith("HTML_")){
+						body=body.substring(5);
+//						if(subject.indexOf("Pro Tip: Track Changes to Your Sheet")!=-1){
+//								System.out.println("GOt Message hEre ");
+//								sm=PhishMailGuard.processMessage(body,m);
+//								
+//						}
+					}
+				}
+				String q="insert into emails(toid, fromid, sub, body, mdate, userid,messageNo) values(?,?,?,?,?,?,?)";
+				DBUtils.executeUpdate(q, new Object[]{toString,from,subject,body,sendDate,userId,m.getMessageNumber()});
+				
+				
+			}
+			
+			System.out.println("Got Emails " + msg.length);
+		} catch (Exception mex) {
+			mex.printStackTrace();
+		}
+		return msg;
+		
+		
+		
+	}
+	
+	
+	static String data = "";
+	static String attached = "";
+	static String to = "";
+	static String sub = "";
+	static String mid = "";
+	static String date = "";
+	static String from = "";
+	static String recipient = "";
+
+	public static String ACCOUNT_USER2 = "mail.rajesh.agrawal@gmail.com";// provide
+	public static String ACCOUNT_PASSWORD2 = "raj@54321";// provide password
+	
+//	public static String ACCOUNT_USER2 = "TeamTechnoWings@gmail.com";// provide
+//	public static String ACCOUNT_PASSWORD2 = "raj@1234";// provide password
+	
+//	public static String ACCOUNT_USER2 = "ashokmalkar01@gmail.com";// provide
+//	public static String ACCOUNT_PASSWORD2 = "8275925693";// provide password
+
+	public static int lastmsgno = 0;
+	public static String getFrom(Message msg){
+		Address[] froms;
+		String from = "";
+		try {
+			froms = msg.getFrom();
+		
+			for (int j = 0; froms != null && j < froms.length; j++) {
+				String s = froms[j].toString().toLowerCase();
+				if (s.indexOf("<") != -1)
+					s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+				from += "," + s.toString();
+			}
+			if(from.length()>1){
+				from=from.substring(1);
+			}
+//			System.out.println(from);
+		} catch (MessagingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return from;
+	}
+	
+	public static void main23232(String[] args) {
+		Message[] arr = getAllGmails(ACCOUNT_USER2, ACCOUNT_PASSWORD2);
+		
+		System.out.println(arr.length);
+		for (int i = 0; arr!=null&&i < arr.length; i++) {
+			Message msg = arr[i];
+			Address[] froms;
+			try {
+				froms = msg.getFrom();
+				from = "";
+				for (int j = 0; froms != null && j < froms.length; j++) {
+					String s = froms[j].toString().toLowerCase();
+					if (s.indexOf("<") != -1)
+						s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+					from += "," + s.toString();
+				}
+				System.out.println(from);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			String toString = "";
+//			if (from.indexOf("siddhesh@gmx.us") != -1) {
+//				System.out.println("Hello");
+//			}
+			Address[] to;
+			try {
+				to = msg.getAllRecipients();
+				for (int j = 0; to != null && j < to.length; j++) {
+					String s = to[j].toString().toLowerCase();
+					if (s.indexOf("<") != -1)
+						s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+					toString += "," + s.toString();
+				}
+				// System.out.println("TO String "+toString);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			try {
+				String subject = msg.getSubject();
+				System.out.println(subject);
+				ArrayList<String> data = processMessageBody(msg);
+				System.out.println("Data " + data.size());
+
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+	}
+	
+	
+	public static void getEmails(Message[] msgArray,int type) {
+
+		String query = "SELECT mail1,mail2,mail3,mail4,mail5,groupId,teamcount FROM enquiry where  date(cdate)>date('2014-06-01') order by groupid";
+
+		ArrayList list = (ArrayList) DBUtils.getMapList(query);
+		HashMap<String,Integer> mailIds=new HashMap<String,Integer>();
+		// System.out.println("lastmsgno " + lastmsgno);
+		for (int i = 0; i < list.size(); i++) {
+			HashMap hm = (HashMap) list.get(i);
+			String groupId = StringHelper.n2s(hm.get("groupId"));
+			int iGrp=Integer.parseInt(groupId);
+			// query = "select max(m_id) from emailmaster where gid= " +
+			// groupId;
+			// int lastmsgno = StringHelper.n2i(DBUtils.getMaxValueInt(query));
+			String mail1 = StringHelper.n2s(hm.get("mail1"));
+			String mail2 = StringHelper.n2s(hm.get("mail2"));
+			String mail3 = StringHelper.n2s(hm.get("mail3"));
+			String mail4 = StringHelper.n2s(hm.get("mail4"));
+			String mail5 = StringHelper.n2s(hm.get("mail5"));
+			ArrayList list1 = new ArrayList();
+			list1.add(groupId);
+			// System.out.println("Processing..... " + groupId);
+			int k = 1;
+			if (mail1.length() > 0) {
+//				list1.add(mail1.toLowerCase());
+				mailIds.put(mail1.toLowerCase(), iGrp);
+				k++;
+			}
+			if (mail2.length() > 0) {
+//				list1.add(mail2.toLowerCase());
+				mailIds.put(mail2.toLowerCase(), iGrp);
+				k++;
+			}
+			if (mail3.length() > 0) {
+//				list1.add(mail3.toLowerCase());
+				mailIds.put(mail3.toLowerCase(), iGrp);
+				k++;
+			}
+			if (mail4.length() > 0) {
+				mailIds.put(mail4.toLowerCase(), iGrp);
+//				list1.add(mail4.toLowerCase());
+				k++;
+			}
+			if (mail5.length() > 0) {
+				mailIds.put(mail5.toLowerCase(), iGrp);
+//				list1.add(mail5.toLowerCase());
+				k++;
+			}
+			// System.out.println(list1.size());
+		
+		}
+		msgArray = getMessage(msgArray, mailIds, lastmsgno,type);
+	}
+
+	public static Message[] getMessage(Message[] msgArray, HashMap<String,Integer> mailIds,
+			int lastMsgNo,int type) {
+		// System.out.println("msg size " + msgArray);
+		String groupId = StringHelper.n2s(mailIds.get(0));
+		try {
+			System.out.println(" Loop ");
+			System.out.println("Processing.....");
+			for (int i = 0; i < msgArray.length; i++) {
+				
+				Message msg = msgArray[i];
+				if (msg == null) {
+					System.out.println("Skipping.....===>>>" + i);
+					continue;
+				}
+				
+				// System.out.println(msg.getMessageNumber());
+
+				HashMap hm = new HashMap();
+				Address[] recipients;
+
+				recipients = msg.getRecipients(Message.RecipientType.BCC);
+
+				if (recipients == null || recipients.length == 0) {
+					recipients = msg.getRecipients(Message.RecipientType.TO);
+				}
+				if (recipients == null || recipients.length == 0) {
+					recipients = msg.getRecipients(Message.RecipientType.CC);
+				}
+
+				date = msg.getSentDate().toString();
+				sub = msg.getSubject();
+				mid = msg.getMessageNumber() + "";
+				attached = "";
+				data = "";
+				recipient = "";
+				from = "";
+				boolean flag = false;
+
+				for (int j = 0; recipients != null && j < recipients.length; j++) {
+					String s = recipients[j].toString().toLowerCase();
+					if(s.indexOf("<")!=-1)
+						s=s.substring(s.indexOf("<")+1,s.indexOf(">"));
+					
+						Object object = mailIds.get(s);
+						// System.out.println("==>>>>" + object);
+						if (object!=null) {
+							flag = true;
+							groupId=object.toString();
+						}
+						recipient += s + "#";
+					
+				}
+
+				Address[] froms = msg.getFrom();
+
+				for (int j = 0; froms != null && j < froms.length; j++) {
+					String s = froms[j].toString().toLowerCase();
+					if(s.indexOf("<")!=-1)
+						s=s.substring(s.indexOf("<")+1,s.indexOf(">"));
+					
+					Object object = mailIds.get(s);
+						// System.out.println("==");
+//						String object = StringHelper.n2s(mailIds.get(k));
+					if (object!=null) {
+							flag = true;
+							groupId=object.toString();
+						}
+						from +=s.toString();
+					
+					// System.out.println(from);
+				}
+			
+				if (!flag) {
+					if ((from.indexOf("@gmail.com") != -1)
+							|| (from.indexOf("@yahoo.com") != -1)
+							|| (from.indexOf("@rocketmail.com") != -1)
+							|| (from.indexOf("@rediffmail.com") != -1)) {
+						flag = true;
+						groupId = "0";
+					}
+				}
+
+				if (flag) {
+					// System.out.println(true);
+					processMessageBody(msg);
+					HashMap h = new HashMap();
+
+					h.put("mid", mid);
+					h.put("body", html2text(data));
+					h.put("sub", sub);
+					h.put("date", date);
+					h.put("file", attached);
+					h.put("gid", groupId);
+					h.put("from", from);
+					h.put("type", type);
+					h.put("recipient", recipient);
+					// System.out.println(h);
+					// System.out.println(msg.getMessageNumber());
+					// System.out.println("Adding.....===>>>" +mid+" "+ sub);
+					// System.out.println("Adding....."+sub);
+					saveEmailInDb(h);
+					msgArray[i] = null;
+					// System.out.println(h);
+				} else {
+					// processMessageBody(msg);
+					// HashMap h = new HashMap();
+					//
+					// // h.put("mid", mid);
+					// h.put("from", from);
+					// h.put("recipient", recipient);
+					// h.put("body", html2text(data));
+					// h.put("sub", sub);
+					// h.put("date", date);
+					// h.put("file", attached);
+					// h.put("gid", 0);
+					// System.out.println("ELSE " + h);
+
+				}
+
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return msgArray;
+	}
+
+	
+	
+	public static Message[] getAllEmails(final int lastmsgno,int type) {
+
+		ArrayList list = new ArrayList();
+		Properties props = new Properties();
+		props.setProperty("mail.store.protocol", "imaps");
+		Message msg[] = null;
+		try {
+			Session session = Session.getInstance(props, null);
+//			Store store = session.getStore();
+//			if(type==1)
+////				store.connect("imap.gmail.com", ACCOUNT_USER1, ACCOUNT_PASSWORD1);
+//			else if(type==2) 
+				store.connect("imap.gmail.com", ACCOUNT_USER2, ACCOUNT_PASSWORD2);
+
+			Folder inbox = store.getFolder("[Gmail]/All Mail");
+			inbox.open(Folder.READ_ONLY);
+			SearchTerm sr = new SearchTerm() {
+
+				@Override
+				public boolean match(Message arg0) {
+					// TODO Auto-generated method stub
+					if (arg0.getMessageNumber() > lastmsgno)
+						return true;
+					else
+						return false;
+				}
+			};
+			msg = inbox.search(sr);
+
+			System.out.println("Got Emails " + msg.length);
+		} catch (Exception mex) {
+		}
+		return msg;
+	}
+
+	public static void saveEmailInDb(HashMap params) {
+		String gid, sub, body, file, mid, date, from, recipient;
+		gid = StringHelper.n2s(params.get("gid"));
+		sub = StringHelper.n2s(params.get("sub"));
+		body = StringHelper.n2s(params.get("body"));
+		file = StringHelper.n2s(params.get("file"));
+		mid = StringHelper.n2s(params.get("mid"));
+		date = StringHelper.n2s(params.get("date"));
+		from = StringHelper.n2s(params.get("from"));
+		int type= StringHelper.n2i(params.get("type"));
+		recipient = StringHelper.n2s(params.get("recipient"));
+
+		
+		// eid, gid, sub, body, efile, m_id, edate, efrom, erecipient
+		String query = "insert into emailmaster(gid, sub, body, efile, m_id, edate, efrom, erecipient,type) values(?,?,?,?,?,?,?,?,?)";
+		DBUtils.executeUpdate(query, new Object[] { gid, sub, body, file, mid,
+				date, from, recipient,type });
+
+	}
+
+	public static void parsemessage(Message message) throws MessagingException,
+			IOException {
+		// System.out.println("<" + message.getFrom()[0] + "> "
+		// + message.getSubject());
+		Multipart multipart = (Multipart) message.getContent();
+		// System.out.println("     > Message has " + multipart.getCount()
+		// + " multipart elements");
+		for (int j = 0; j < multipart.getCount(); j++) {
+			BodyPart bodyPart = multipart.getBodyPart(j);
+			if (!Part.ATTACHMENT.equalsIgnoreCase(bodyPart.getDisposition())) {
+				if (bodyPart.getContent().getClass()
+						.equals(MimeMultipart.class)) {
+					MimeMultipart mimemultipart = (MimeMultipart) bodyPart
+							.getContent();
+					// System.out.println("Number of embedded multiparts "
+					// + mimemultipart.getCount());
+					for (int k = 0; k < mimemultipart.getCount(); k++) {
+						if (mimemultipart.getBodyPart(k).getFileName() != null) {
+							// System.out
+							// .println("     > Creating file with name : "
+							// + mimemultipart.getBodyPart(k)
+							// .getFileName());
+							savefile(
+									mimemultipart.getBodyPart(k).getFileName(),
+									mimemultipart.getBodyPart(k)
+											.getInputStream());
+						}
+					}
+				}
+				continue;
+			}
+			// System.out.println("     > Creating file with name : "
+			// + bodyPart.getFileName());
+			savefile(bodyPart.getFileName(), bodyPart.getInputStream());
+		}
+	}
+
+	public static void savefile(String FileName, InputStream is)
+			throws IOException {
+		File f = new File(FileName);
+		FileOutputStream fos = new FileOutputStream(f);
+		byte[] buf = new byte[4096];
+		int bytesRead;
+		while ((bytesRead = is.read(buf)) != -1) {
+			fos.write(buf, 0, bytesRead);
+		}
+		fos.close();
+	}
+
+	public static ArrayList<String> processMessageBody(Message message) {
+		// System.out.println("In processMessageBody");
+		ArrayList<String> arr=new ArrayList<String>();
+		try {
+		
+			Object content = message.getContent();
+			// check for string
+			// then check for multipart
+			if (content instanceof String) {
+				// System.out.println("=====" + content);
+				data += content;
+				arr.add(data);
+			} else if (content instanceof Multipart) {
+				Multipart multiPart = (Multipart) content;
+				for (int k = 0; k < multiPart.getCount(); k++) {
+					if (multiPart.getBodyPart(k).getFileName() != null) {
+						// System.out.println(" "
+						// + multiPart.getBodyPart(k).getFileName());
+						attached += multiPart.getBodyPart(k).getFileName()
+								+ ",";
+					}
+				}
+				procesMultiPart(multiPart,arr);
+			} else if (content instanceof InputStream) {
+				// InputStream inStream = (InputStream) content;
+				// int ch;
+				// while ((ch = inStream.read()) != -1) {
+				// // System.out.write(ch);
+				// }
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (MessagingException e) {
+			e.printStackTrace();
+		}
+		return arr;
+	}
+
+	public static String html2text(String html) {
+		return Jsoup.parse(html).text();
+	}
+
+	public static void procesMultiPart(Multipart content,ArrayList<String> mailBody) {
+		// System.out.println("In procesMultiPart");
+		try {
+			int multiPartCount = content.getCount();
+			for (int i = 0; i < multiPartCount; i++) {
+				BodyPart bodyPart = content.getBodyPart(i);
+				Object o;
+
+				o = bodyPart.getContent();
+				if (o instanceof String) {
+					
+					mailBody.add("HTML_"+o.toString());
+					data = html2text(o.toString());
+				} else if (o instanceof Multipart) {
+					procesMultiPart((Multipart) o,mailBody);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (MessagingException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+}

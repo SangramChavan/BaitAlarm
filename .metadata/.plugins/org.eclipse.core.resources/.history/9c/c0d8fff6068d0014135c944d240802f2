@@ -1,0 +1,108 @@
+package com.helper;
+
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+public class PhishMailGuard {
+	public static void main(String[] args) {
+//		processMessage("");
+		String text="download_recording true Package available abc.com/recDownload/635131586215948750.exe";
+		String regex = "\\(?[-A-Za-z0-9+&amp;@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&amp;@#/%=~_()|]";
+		Pattern p = Pattern.compile(regex);
+		Matcher m = p.matcher(text);
+		while(m.find()) {
+		String urlStr = m.group();
+		if (urlStr.startsWith("(") &&urlStr.endsWith(")"))
+		{
+		urlStr = urlStr.substring(1, urlStr.length() - 1);
+		}
+		System.out.println(urlStr);
+		}
+		
+	}
+	public static void main2(String[] args) {
+		Message[] arr = ReadRecentMail.getAllGmails(ReadRecentMail.ACCOUNT_USER2, ReadRecentMail.ACCOUNT_PASSWORD2);
+		
+		System.out.println(arr.length);
+		for (int i = 2; i < 3; i++) {
+			Message msg = arr[i];
+			Address[] froms;
+			try {
+				froms = msg.getFrom();
+				String from = "";
+				for (int j = 0; froms != null && j < froms.length; j++) {
+					String s = froms[j].toString().toLowerCase();
+					if (s.indexOf("<") != -1)
+						s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+					from += "," + s.toString();
+				}
+				System.out.println(from);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			String toString = "";
+//			if (from.indexOf("siddhesh@gmx.us") != -1) {
+//				System.out.println("Hello");
+//			}
+			Address[] to;
+			try {
+				to = msg.getAllRecipients();
+				for (int j = 0; to != null && j < to.length; j++) {
+					String s = to[j].toString().toLowerCase();
+					if (s.indexOf("<") != -1)
+						s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+					toString += "," + s.toString();
+				}
+				// System.out.println("TO String "+toString);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			try {
+				String subject = msg.getSubject();
+				System.out.println(subject);
+				ArrayList<String> data = ReadRecentMail.processMessageBody(msg);
+				System.out.println("Data " + data.size());
+//				FileWriter a=new FileWriter(new File("D:/a.html"));
+//				a.write(data.get(0));
+//				a.close();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+	}
+	
+	public void performDNSTest(Elements links){
+		 for (Element link : links) {
+			 String s=link.text();
+			 System.out.println(link.attr("abs:href")+" ["+link.text()+"]");
+			  
+		  }
+		
+	}
+	
+	public static void processMessage(String html){
+		StringBuffer sv=StringHelper.readFileContent("D:\\a.html");
+		Document doc = Jsoup.parse(sv.toString());
+		Elements links = doc.select("a[href]");
+		  for (Element link : links) {
+			  System.out.println(link.attr("abs:href")+" ["+link.text()+"]");
+			  
+		  }
+	}
+	
+}

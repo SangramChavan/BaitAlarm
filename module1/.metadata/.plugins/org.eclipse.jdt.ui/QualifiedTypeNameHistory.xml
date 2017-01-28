@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="java.util.TimerTask"/>
+<fullyQualifiedTypeName name="org.apache.tomcat.jni.Time"/>
+<fullyQualifiedTypeName name="java.util.Timer"/>
+<fullyQualifiedTypeName name="java.util.Date"/>
+<fullyQualifiedTypeName name="com.helper.UserModel"/>
+<fullyQualifiedTypeName name="com.helper.ConnectionManager"/>
+<fullyQualifiedTypeName name="com.helper.ReadRecentMail"/>
+<fullyQualifiedTypeName name="org.apache.commons.net.DatabaseHelper"/>
+</qualifiedTypeNameHistroy>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<%@page import="javax.mail.Message"%>
+<%@page import="com.helper.ReadRecentMail"%>
+<%@page import="com.helper.SimpleCryptoAndroidJava"%>
+<html lang="en">
+<head>
+<%@include file="../theme/tiles/inc.jsp" %>
+</head><!--/head-->
+<body>
+   <%@include file="../theme/tiles/menu.jsp" %>
+<%
+Message[] msg=null;
+if(um!=null){
+	String email=um.getEmail();
+	String pass=SimpleCryptoAndroidJava.decryptString(um.getPass());
+	msg=ReadRecentMail.getAllGmails(email, pass);	
+	
+}
+%>
+
+    <section id="recent-works">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3">
+                
+                </div>
+                <div class="col-md-9">
+    	<%
+    	for(int i=0;msg!=null&& i<msg.length;i++){
+    		Message m=msg[i];
+    		%>
+    		<tr>
+    			<td><%=ReadRecentMail.getFrom(m)%></td>
+    			<td><%=m.getSubject()%></td>
+    		</tr>
+    		<%
+    		
+    	}
+    	
+    	%>                
+                </div>
+            </div><!--/.row-->
+        </div>
+    </section><!--/#recent-works-->
+
+   <%@include file="../theme/tiles/footer.jsp" %>
+</body>
+</html>

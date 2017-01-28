@@ -1,0 +1,33 @@
+package com.action;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import org.w3c.dom.css.CSSStyleSheet;
+import org.xml.sax.InputSource;
+
+import com.steadystate.css.parser.CSSOMParser;
+
+public class CSSParserDemo {
+	public static void main(String[] args) {
+		try {
+			InputStream stream = this.getClass().getResourceAsStream("/simple.css");
+
+	
+
+			// wrap as an InputSource
+
+			InputSource source = new InputSource(new InputStreamReader(stream));
+
+			// instantiate a parser
+
+			CSSOMParser parser = new CSSOMParser();
+
+			// parse and create a stylesheet
+
+			CSSStyleSheet stylesheet = parser.parseStyleSheet(source, null, null);
+		} catch (Exception t) {
+			t.printStackTrace();
+		}
+	}
+}

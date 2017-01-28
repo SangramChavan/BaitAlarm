@@ -1,0 +1,284 @@
+package com.helper;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+import com.action.GoogleSafeBrowsing;
+
+public class PhishMailGuard {
+	
+	public static boolean isWhitelist(String url){
+		int i= GoogleSafeBrowsing.isPhishing(url);
+		if(i==1||i==2||i==3){
+			return false;
+		}
+		return true;
+	}
+	
+	public static boolean isEncoded(String url) {
+		boolean flag = false;
+		try {
+			if (url.equals(java.net.URLDecoder.decode(url, "UTF-8"))) {
+				System.out.println("URL didn't contain encoded parts.");
+				flag = false;
+			} else {
+				System.out.println("URL contained encoded parts.");
+				flag = true;
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return flag;
+	}
+	public static void main(String[] args) {
+		
+		boolean b=isEncoded("http://blog.houen.net/java-get-url-from-string/");
+		System.out.println("boolean "+b);
+
+	}
+	
+	public static String getIpFromText(String text) {
+		String regularExpression = "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})";
+		String u = "";
+		// String text=
+		// "http://192.168.0.103/xpl/articleDetails.jsp?reload=true&tp=&arnumber=6409092&queryText%3Dphish+mail+guard";
+		Pattern p = Pattern.compile(regularExpression);
+		Matcher m = p.matcher(text);
+		while (m.find()) {
+			String urlStr = m.group();
+			if (urlStr.startsWith("(") && urlStr.endsWith(")")) {
+				urlStr = urlStr.substring(1, urlStr.length() - 1);
+			}
+
+			u = urlStr;
+			break;
+		}
+		System.out.println(u);
+		return u;
+	}
+	public static void main21(String[] args) {
+		String shortURL = "http://goo.gl/j9KgUW";
+		System.out.println("Short URL: " + getCompleteURL(shortURL));
+	
+	}
+
+	public static String getCompleteURL(String shortURL) {
+//		String shortURL = "http://goo.gl/j9KgUW";
+		String completePath=shortURL;
+		try {
+			System.out.println("Short URL: " + shortURL);
+			URLConnection urlConn = connectURL(shortURL);
+			urlConn.getHeaderFields();
+
+			completePath = urlConn.getURL().toString();
+			System.out.println("Original URL: " + urlConn.getURL());
+			// https://www.youtube.com/watch?v=qMmhgCAAWVw
+
+			/*
+			 * connectURL - This function will take a valid url and return a URL
+			 * object representing the url address.
+			 */
+			//
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		return completePath;
+		
+	}
+	public static URLConnection connectURL(String strURL) {
+		URLConnection conn = null;
+		try {
+			URL inputURL = new URL(strURL);
+			conn = inputURL.openConnection();
+			int test = 0;
+
+		} catch (MalformedURLException e) {
+			System.out.println("Please input a valid URL");
+		} catch (IOException ioe) {
+			System.out.println("Can not connect to the URL");
+		}
+		return conn;
+	}
+
+	public static String getURL(String text122) {
+		// processMessage("");
+		String text = "download_recording true Package available www.abc.com/recDownload/635131586215948750.exe";
+		// String regex =
+		// "\\(?\\b(http://|www[.])[-A-Za-z0-9+&amp;@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&amp;@#/%=~_()|]";
+		String regularExpression = "((((ht{2}ps?://)?)((w{3}\\.)?))?)[^.&&[a-zA-Z0-9]][a-zA-Z0-9.-]+[^.&&[a-zA-Z0-9]](\\.[a-zA-Z]{2,3})";
+
+		String u = "";
+		Pattern p = Pattern.compile(regularExpression);
+		Matcher m = p.matcher(text);
+		while (m.find()) {
+			String urlStr = m.group();
+			if (urlStr.startsWith("(") && urlStr.endsWith(")")) {
+				urlStr = urlStr.substring(1, urlStr.length() - 1);
+			}
+			System.out.println(urlStr);
+			u = urlStr;
+			break;
+		}
+
+		// String regularExpression =
+		// "((((ht{2}ps?://)?)((w{3}\\.)?))?)[^.&&[a-zA-Z0-9]][a-zA-Z0-9.-]+[^.&&[a-zA-Z0-9]](\\.[a-zA-Z]{2,3})";
+
+		// System.out.println("www.google.com".matches(regularExpression));
+		// System.out.println("www.google.co.uk".matches(regularExpression));
+		// System.out.println("http://www.google.com".matches(regularExpression));
+		// System.out.println("http://www.google.co.uk".matches(regularExpression));
+		// System.out.println("https://www.google.com".matches(regularExpression));
+		// System.out.println("https://www.google.co.uk".matches(regularExpression));
+		// System.out.println("google.com".matches(regularExpression));
+		// System.out.println("google.co.uk".matches(regularExpression));
+		// System.out.println("google.mu".matches(regularExpression));
+		// System.out.println("mes.intnet.mu".matches(regularExpression));
+		// System.out.println("cse.uom.ac.mu".matches(regularExpression));
+
+		// //cannot contain 2 '.' after www
+		// assertFalse("www..dr.google".matches(regularExpression));
+		//
+		// //cannot contain 2 '.' just before com
+		// assertFalse("www.dr.google..com".matches(regularExpression));
+		//
+		// // to test case where url www must be followed with a '.'
+		// assertFalse("www:google.com".matches(regularExpression));
+		//
+		// // to test case where url www must be followed with a '.'
+		// //assertFalse("http://wwwe.google.com".matches(regularExpression));
+		//
+		// // to test case where www must be preceded with a '.'
+		// assertFalse("https://www@.google.com".matches(regularExpression));
+		//
+		return u;
+	}
+
+	public static void main2(String[] args) {
+		Message[] arr = ReadRecentMail.getAllGmails(
+				ReadRecentMail.ACCOUNT_USER2, ReadRecentMail.ACCOUNT_PASSWORD2);
+
+		System.out.println(arr.length);
+		for (int i = 2; i < 3; i++) {
+			Message msg = arr[i];
+			Address[] froms;
+			try {
+				froms = msg.getFrom();
+				String from = "";
+				for (int j = 0; froms != null && j < froms.length; j++) {
+					String s = froms[j].toString().toLowerCase();
+					if (s.indexOf("<") != -1)
+						s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+					from += "," + s.toString();
+				}
+				System.out.println(from);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			String toString = "";
+			// if (from.indexOf("siddhesh@gmx.us") != -1) {
+			// System.out.println("Hello");
+			// }
+			Address[] to;
+			try {
+				to = msg.getAllRecipients();
+				for (int j = 0; to != null && j < to.length; j++) {
+					String s = to[j].toString().toLowerCase();
+					if (s.indexOf("<") != -1)
+						s = s.substring(s.indexOf("<") + 1, s.indexOf(">"));
+					toString += "," + s.toString();
+				}
+				// System.out.println("TO String "+toString);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			try {
+				String subject = msg.getSubject();
+				System.out.println(subject);
+				ArrayList<String> data = ReadRecentMail.processMessageBody(msg);
+				System.out.println("Data " + data.size());
+				// FileWriter a=new FileWriter(new File("D:/a.html"));
+				// a.write(data.get(0));
+				// a.close();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+	}
+
+	public void performDNSTest(Elements links) {
+		for (Element link : links) {
+			String s = link.text();
+			System.out
+					.println(link.attr("abs:href") + " [" + link.text() + "]");
+
+		}
+
+	}
+
+	public static void processMessage(String html) {
+		StringBuffer sv = StringHelper.readFileContent("D:\\a.html");
+		Document doc = Jsoup.parse(sv.toString());
+		Elements links = doc.select("a[href]");
+		int ipAddressURLs=0;
+		int shortenedURLS=0;
+		int anchorHrefURLDiffs=0;
+		int whitelistURLs=0;
+		for (Element link : links) {
+			System.out.println(link.attr("abs:href") + " [" + link.text() + "]");
+			String href=link.attr("abs:href");
+			String text=link.text();
+			
+			// Check if url has ip address
+			String ip=getIpFromText(href);
+			if(ip.length()>0){
+				ipAddressURLs++;
+			}
+			String anchorTextURL=getURL(text);
+			
+			// Achor Text and URL Diffrence Test
+			if(anchorTextURL.length()>0){
+				try {
+					URL u=new URL(href);
+				} catch (MalformedURLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				if(href.toLowerCase().indexOf(anchorTextURL.toLowerCase())==-1){
+					anchorHrefURLDiffs++;
+				}
+			}
+			
+			String s=getCompleteURL(href);
+			if(!s.equalsIgnoreCase(href)){
+				shortenedURLS++;
+			}
+			
+			boolean b=isWhitelist(href);
+			if(!b){
+				whitelistURLs++;
+			}
+			
+		}
+	}
+
+}

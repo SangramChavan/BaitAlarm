@@ -1,0 +1,51 @@
+package com.action;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import com.steadystate.css.parser.CSSOMParser;
+
+import java.io.InputStream;
+
+import java.io.InputStreamReader;
+
+import junit.framework.Test;
+
+import junit.framework.TestCase;
+
+import junit.framework.TestSuite;
+
+import org.w3c.css.sac.InputSource;
+
+import org.w3c.dom.css.CSSStyleSheet;
+
+import org.w3c.dom.css.CSSRuleList;
+
+import org.w3c.dom.css.CSSRule;
+
+import org.w3c.dom.css.CSSStyleRule;
+
+import org.w3c.dom.css.CSSStyleDeclaration;
+
+public class CSSParserDemo {
+	public static void main(String[] args) {
+		try {
+			InputStream stream = new FileInputStream(new File("D:\\work\\project\\EarlyDisaster\\DisasterWarningWeb\\WebContent\\theme\\font.css"));
+			// wrap as an InputSource
+
+			InputSource source = new InputSource(new InputStreamReader(stream));
+
+			// instantiate a parser
+
+			CSSOMParser parser = new CSSOMParser();
+
+			// parse and create a stylesheet
+
+			CSSStyleSheet stylesheet = parser.parseStyleSheet(source, null, null);
+		} catch (Exception t) {
+			t.printStackTrace();
+		}
+	}
+}

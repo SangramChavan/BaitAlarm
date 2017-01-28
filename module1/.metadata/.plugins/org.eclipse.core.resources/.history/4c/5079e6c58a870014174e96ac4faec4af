@@ -1,0 +1,126 @@
+package com.action;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import org.w3c.css.sac.InputSource;
+import org.w3c.dom.css.CSSRule;
+import org.w3c.dom.css.CSSRuleList;
+import org.w3c.dom.css.CSSStyleDeclaration;
+import org.w3c.dom.css.CSSStyleRule;
+import org.w3c.dom.css.CSSStyleSheet;
+
+import com.steadystate.css.parser.CSSOMParser;
+
+public class CSSParserDemo {
+	public static void main(String[] args) {
+		loadCSSStyle("D:\\work\\project\\EarlyDisaster\\DisasterWarningWeb\\WebContent\\theme\\looks.css");
+	}
+	public void selectTagTypes(ArrayList<String> styleList){
+		ArrayList<String> tagSelector=new ArrayList<String>();
+		ArrayList<String> classSelector=new ArrayList<String>();
+		ArrayList<String> idSelector=new ArrayList<String>();
+		ArrayList<String> otherSelector=new ArrayList<String>();
+		
+		for (Iterator iterator = styleList.iterator(); iterator.hasNext();) {
+			String styleSelector1 = (String) iterator.next();
+			 String[] selectorComponents=styleSelector1.split("\\s*,\\s*");
+			 for (int i = 0; i < selectorComponents.length; i++) {
+				String styleSelector=selectorComponents[i];
+				if(styleSelector.indexOf("#")!=-1){	// id selector
+					idSelector.add(styleSelector);
+				}
+				else if(styleSelector.indexOf(".")!=-1){	// class selector
+					classSelector.add(styleSelector);
+				}else if((styleSelector.indexOf(":")!=-1)||(styleSelector.indexOf("=")!=-1)||(styleSelector.indexOf(">")!=-1)||(styleSelector.indexOf("\\+")!=-1)){
+					
+				}
+			}
+			
+			
+		}
+	}
+	
+	public static ArrayList<String> loadCSSStyle(String filePath) {
+		ArrayList<String> styleList=new ArrayList<String>();
+		try {
+			InputStream stream = new FileInputStream(new File(filePath));
+			// wrap as an InputSource
+			InputSource source = new InputSource(new InputStreamReader(stream));
+
+			// instantiate a parser
+			CSSOMParser parser = new CSSOMParser();
+			CSSStyleSheet stylesheet = parser.parseStyleSheet(source, null,null);
+			CSSRuleList ruleList = stylesheet.getCssRules();
+			for (int i = 0; i < ruleList.getLength(); i++) {
+				CSSRule rule = ruleList.item(i);
+				if (rule instanceof CSSStyleRule) {
+					CSSStyleRule styleRule = (CSSStyleRule) rule;
+					System.out.println("selector: "+ styleRule.getSelectorText());
+					 String[] selectorComponents=styleRule.getSelectorText().split("\\s*,\\s*");
+					 for (int j = 0; j < selectorComponents.length; j++) {
+						System.out.println("====> "+selectorComponents[j]);
+					}
+					styleList.add(styleRule.getSelectorText());
+					
+					CSSStyleDeclaration styleDeclaration = styleRule.getStyle();
+					
+//					for (int j = 0; j < styleDeclaration.getLength(); j++) {
+//						String property = styleDeclaration.item(j);
+//						System.out.println("property: " + property);
+//						System.out.println("value: "+ styleDeclaration.getPropertyCSSValue(property).getCssText());
+//					}
+				}
+			}
+		} catch (Exception t) {
+			t.printStackTrace();
+		}
+		return styleList;
+	}
+	public static void showCSSStyle(String filePath) {
+		try {
+			InputStream stream = new FileInputStream(new File(filePath));
+			// wrap as an InputSource
+			InputSource source = new InputSource(new InputStreamReader(stream));
+
+			// instantiate a parser
+			CSSOMParser parser = new CSSOMParser();
+			CSSStyleSheet stylesheet = parser.parseStyleSheet(source, null,
+					null);
+
+			CSSRuleList ruleList = stylesheet.getCssRules();
+			for (int i = 0; i < ruleList.getLength(); i++) {
+				CSSRule rule = ruleList.item(i);
+
+				if (rule instanceof CSSStyleRule) {
+
+					CSSStyleRule styleRule = (CSSStyleRule) rule;
+
+					System.out.println("selector: "
+							+ styleRule.getSelectorText());
+
+					CSSStyleDeclaration styleDeclaration = styleRule.getStyle();
+					
+					for (int j = 0; j < styleDeclaration.getLength(); j++) {
+
+						String property = styleDeclaration.item(j);
+
+						System.out.println("property: " + property);
+
+						System.out.println("value: "
+								+ styleDeclaration
+										.getPropertyCSSValue(property)
+										.getCssText());
+
+					}
+				}
+			}
+		} catch (Exception t) {
+			t.printStackTrace();
+		}
+	}
+}

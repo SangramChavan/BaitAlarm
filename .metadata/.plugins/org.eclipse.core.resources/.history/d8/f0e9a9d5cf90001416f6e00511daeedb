@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+
+<%@page import="com.helper.EmailModel"%>
+<%@page import="java.util.List"%>
+<%@page import="com.helper.SpamModel"%>
+<%@page import="com.helper.PhishMailGuard"%>
+<%@page import="javax.mail.Message"%>
+<%@page import="com.helper.ReadRecentMail"%>
+<%@page import="com.helper.SimpleCryptoAndroidJava"%>
+<html lang="en">
+<head>
+<%@include file="../theme/tiles/inc.jsp" %>
+</head><!--/head-->
+<body>
+   <%@include file="../theme/tiles/menu.jsp" %>
+
+
+    <section id="recent-works">
+        <div class="container">
+            <div class="row">
+             
+                <div class="col-md-10">
+                <h2>Algorithm</h2>   
+                <span >
+              
+                <table>
+                <tr>
+                <td>From </td>
+                <td>Subject</td>
+                <td>Sent</td>
+                
+                
+                </tr>
+    	<%
+    	session.setAttribute("Message",msg);
+    	if(msg!=null){
+    	for(int i=0;msg!=null&& i<msg.size();i++){
+    		EmailModel model=msg.get(i);
+    		%>
+    		<tr>
+    			<td onclick="$('#msg_<%=model.getMessageNo()%>').show();"><%if(model.getFromid().length()>30){%><%=model.getFromid().substring(0,30) %><%}else{ %><%=model.getFromid()%><%} %> </td>
+    			<td><a href="#" onclick='javascript:window.open ("<%=request.getContextPath()%>/pages/showMessage.jsp?index=<%=model.getMessageId()%>", "Email Content","scrollbars=yes,status=0,toolbar=0,width=800,height=400");' ><%=model.getSub()%></a></td>
+    			<td><%=model.getMdate()%></td>
+    		</tr>
+    		
+    		<%
+    		
+    	}
+    	}
+    	%>          
+    	</table>      
+    	
+    	</span>
+                </div>
+            </div><!--/.row-->
+        </div>
+    </section><!--/#recent-works-->
+
+
+
+
+   <%@include file="../theme/tiles/footer.jsp" %>
+</body>
+</html>
